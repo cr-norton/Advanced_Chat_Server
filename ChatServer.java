@@ -127,12 +127,10 @@ public class ChatServer {
                         return;
                     }
                     else if (input.startsWith("DISCONNECT")){
-                        names.remove(input.substring(10));
+                    	String temp = input.substring(10);
+                        names.remove(temp);
                         for (PrintWriter writer : writers) {
-                        	writer.println("RESET");
-                            for (String s : names) {
-                            	writer.println("UPDATEUSER " + s);
-                            }
+                            writer.println("DISCONNECT" + temp);
     	                    writer.println("MESSAGE " + name + " has disconnected.\n");
                         }
                         if (out != null) {
@@ -143,20 +141,37 @@ public class ChatServer {
                         } catch (IOException e) {
                         }
                     	
-                    } else if (input.startsWith("PM")){
-                    	String newChat = input.substring(2);
+                    } else if (input.startsWith("NEWPM")){
+                    	String newChat = input.substring(5);
+                    	System.out.println("PM to " + newChat + "\n");
+                    	String fromWho = in.readLine();
+                    	System.out.println("PM from " + fromWho + "\n");
                     	if (names.contains(newChat)){
+                    		System.out.println("Recognizes " + newChat + "\n");
                     		for (PrintWriter writer : writers){
-                    			if (writer.equals(newChat)){
-                    				System.out.println(name + " " + writer);
-                    				writer.println("MESSAGE " + name + "wants to chat");
-                    			}
+                    			writer.println("NEWPM" + newChat);
+                    			writer.println(fromWho);
+                    		}
+                    	}
+                    }
+                    else if (input.startsWith("SENDTO")){
+                    	String newChat = input.substring(6);
+                    	System.out.println("PM to " + newChat + "\n");
+                    	System.out.println("PM from " + name + "\n");
+                    	String currentMessage = in.readLine();
+                    	if (names.contains(newChat)){
+                    		System.out.println("Recognizes " + newChat + "\n");
+                    		System.out.println("Message is: " + currentMessage + "\n");
+                    		for (PrintWriter writer : writers){
+                    			writer.println("GET" + newChat);
+                    			writer.println("RECIEVE" + name);
+                    			writer.println( currentMessage );
                     		}
                     	}
                     }
                     else {
 	                    for (PrintWriter writer : writers) {
-	                        writer.println("MESSAGE " + name + ": " + input);
+	                        writer.println("MESSAGE " + input);
 	                        System.out.println("Message from " + name + ": " + input);
 	                    }
                     }
