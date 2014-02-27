@@ -1,19 +1,42 @@
 package chatclient;
+import java.awt.AlphaComposite;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -26,6 +49,11 @@ public class ChatClient {
     
     BufferedReader in;
     PrintWriter out;
+    
+    OutputStream outStream;
+    DataOutputStream dosStream;
+    InputStream inStream;
+    DataInputStream disStream;
     
     JFrame frame = new JFrame("LetsTalk");
     
@@ -41,14 +69,14 @@ public class ChatClient {
     JButton uploadimage = new JButton("Upload");
     JButton status = new JButton("Status");
     JButton admin = new JButton("Admin");
+    //JLabel label = new JLabel();
+    JPanel panel = new JPanel ();
     
+    JFileChooser fc = new JFileChooser();
+
     private HashSet<String> names = new HashSet<>();
     String myUsername;
     String thisServer;
-    
-    public void newChatWindow(){
-        
-    }
 
     public ChatClient(final Socket socket) {
 
@@ -59,8 +87,9 @@ public class ChatClient {
         frame.getContentPane().add(textField, "South");
         frame.getContentPane().add(users, "West");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
-        
         frame.getContentPane().add(buttonFrame, "North");
+        //frame.getContentPane().add(label, "East");
+        frame.getContentPane().add(panel, "East");
         
         buttonFrame.add(status);
         buttonFrame.add(admin);
@@ -70,14 +99,60 @@ public class ChatClient {
         buttonFrame.add(uploadimage);
         buttonFrame.add(disconnect);
         
-        
+        //label.setPreferredSize(new Dimension(200,200));
+        panel.setPreferredSize(new Dimension(100,100));
         frame.pack();
         
+        //JScrollPane scroller = new JScrollPane(label, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        JScrollPane scroller = new JScrollPane(panel, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        frame.add(scroller);
+        
         // Add Listeners
+        uploadimage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int returnVal = fc.showOpenDialog( frame );
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    File file = fc.getSelectedFile();
+                    Image img;
+                    try
+                    {
+                        img = ImageIO.read(file);
+                        BufferedImage originalImage = ImageIO.read(file);
+
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        ImageIO.write( originalImage, "jpg", baos );
+                        baos.flush();
+                        byte[] imageInByte = baos.toByteArray();
+                        baos.close();
+                        
+                        out.println("IMAGE");
+                        
+                        dosStream.writeInt(imageInByte.length);
+                        if (imageInByte.length > 0) {
+                            dosStream.write(imageInByte, 0, imageInByte.length);
+                        }
+
+                    }
+                    catch(IOException k)
+                    {
+
+                    }
+                }
+            }
+            
+        });
+        
+        
+        
         textField.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                out.println(encryption(textField.getText()));
+                DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                Date date = new Date();
+                String reportDate = dateFormat.format(date);
+                String full = reportDate + "      " + textField.getText();
+                out.println(encryption(full));
                 textField.setText("");
             }
         });
@@ -86,6 +161,17 @@ public class ChatClient {
             @Override
             public void actionPerformed(ActionEvent e) {
                 out.println("DISCONNECT" + getName());
+            }
+        });
+        
+        status.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    saveToFile( "saved.txt", messageArea);
+                } catch (Exception ex) {
+                    Logger.getLogger(ChatClient.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
         
@@ -169,12 +255,42 @@ public class ChatClient {
     private String getName() {
         return JOptionPane.showInputDialog(frame, "Choose a screen name:", "Screen name selection", JOptionPane.PLAIN_MESSAGE);
     }
+    
+
+    public synchronized void play(final String fileName) 
+    {         
+        final File file = new File(fileName);
+        new Thread(new Runnable() { 
+            public void run() {
+                try {
+                    Clip clip = AudioSystem.getClip();
+                    AudioInputStream inputStream = AudioSystem.getAudioInputStream(file);
+                    clip.open(inputStream);
+                    clip.start(); 
+                } catch (LineUnavailableException | UnsupportedAudioFileException | IOException e) {
+                    System.out.println("play sound error: " + e.getMessage() + " for " + fileName);
+                }
+            }
+        }).start();
+    }
+
+    
+    public void saveToFile(String fileName, JTextArea textField) throws Exception {
+        FileOutputStream out = new FileOutputStream(fileName, true);
+        out.write(textField.getText().getBytes());
+    } 
+    
 
     private void run(Socket socket) throws IOException {
 
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
 
+        outStream = socket.getOutputStream(); 
+        dosStream = new DataOutputStream(outStream);
+        inStream = socket.getInputStream();
+        disStream = new DataInputStream(inStream);
+        
         while (true) {
             String line = in.readLine();
             
@@ -187,7 +303,8 @@ public class ChatClient {
                 textField.setEditable(true);
             }
             else if (line.startsWith("MESSAGE")) {
-                messageArea.append(decryption(line.substring(8)) + "\n");
+                play("boxing_bell.wav");
+                messageArea.append(decryption(line.substring(7)) + "\n");
             }
             else if (line.startsWith("NEWPM")){
                 String me = line.substring(5);
@@ -195,6 +312,22 @@ public class ChatClient {
                     String fromWho = in.readLine();
                     privateChat(me, fromWho, socket);
                 }
+            } 
+            else if (line.startsWith("IMAGE")){
+
+                int len = disStream.readInt();
+                byte[] data = new byte[len];
+                if (len > 0) {
+                    disStream.readFully(data);
+                }
+                InputStream in = new ByteArrayInputStream(data);
+                BufferedImage bImageFromConvert = ImageIO.read(in);
+                BufferedImage bufferedImage = new BufferedImage(200, 100, BufferedImage.TYPE_INT_RGB);
+                Graphics2D graphics2D = bufferedImage.createGraphics();
+                graphics2D.setComposite(AlphaComposite.Src);
+                graphics2D.drawImage(bImageFromConvert, 0, 0, 200, 100, null);
+                graphics2D.dispose(); 
+                panel.add (new JLabel (new ImageIcon (bufferedImage)));
             } 
             else if (line.startsWith("RESET")){
                 names = null;
@@ -403,9 +536,48 @@ public class ChatClient {
                     encryption = encryption + "0011";
                 }
             }
+            else if ( letter.equals("1") | letter.equals("2") | letter.equals("3") | letter.equals("4") | letter.equals("5") | letter.equals("6") | letter.equals("7") | letter.equals("8") | letter.equals("9") | letter.equals("0")){
+                encryption = encryption + "0111";
+                if ( letter.equals("1") ){
+                    encryption = encryption + "0000";
+                }
+                else if ( letter.equals("2") ){
+                    encryption = encryption + "0001";
+                }
+                else if ( letter.equals("3") ){
+                    encryption = encryption + "0010";
+                }
+                else if ( letter.equals("4") ){
+                    encryption = encryption + "0011";
+                }
+                else if ( letter.equals("5") ){
+                    encryption = encryption + "0100";
+                }
+                else if ( letter.equals("6") ){
+                    encryption = encryption + "0101";
+                }
+                else if ( letter.equals("7") ){
+                    encryption = encryption + "0110";
+                }
+                else if ( letter.equals("8") ){
+                    encryption = encryption + "0111";
+                }
+                else if ( letter.equals("9") ){
+                    encryption = encryption + "1000";
+                }
+                else if ( letter.equals("0") ){
+                    encryption = encryption + "1001";
+                }
+            }
             else if ( letter.equals(" ") ){
                 encryption = encryption + "11111111";
-            }   
+            }
+            else if ( letter.equals(":") ){
+                encryption = encryption + "11100111";
+            }
+            else if ( letter.equals("/") ){
+                encryption = encryption + "11110111";
+            }
         }        
         return encryption;
     }
@@ -596,8 +768,46 @@ public class ChatClient {
                     decryption = decryption + "Z";
                 }
             }
+            else if ( first.equals("0111") ) {
+                if ( second.equals("0000") ){
+                    decryption = decryption + "1";
+                }
+                else if ( second.equals("0001") ){
+                    decryption = decryption + "2";
+                }
+                else if ( second.equals("0010") ){
+                    decryption = decryption + "3";
+                }
+                else if ( second.equals("0011") ){
+                    decryption = decryption + "4";
+                }
+                else if ( second.equals("0100") ){
+                    decryption = decryption + "5";
+                }
+                else if ( second.equals("0101") ){
+                    decryption = decryption + "6";
+                }
+                else if ( second.equals("0110") ){
+                    decryption = decryption + "7";
+                }
+                else if ( second.equals("0111") ){
+                    decryption = decryption + "8";
+                }
+                else if ( second.equals("1000") ){
+                    decryption = decryption + "9";
+                }
+                else if ( second.equals("1001") ){
+                    decryption = decryption + "0";
+                }
+            }
             else if ( first.equals("1111") && (second.equals("1111")) ){
                 decryption = decryption + " ";
+            }
+            else if ( first.equals("1110") && (second.equals("0111")) ){
+                decryption = decryption + ":";
+            }
+            else if ( first.equals("1111") && (second.equals("0111")) ){
+                decryption = decryption + "/";
             }
         }
         
@@ -655,7 +865,7 @@ public class ChatClient {
     
     
     public static void main(String[] args) throws Exception {
-        Socket socket = new Socket("10.253.251.49", 5000);
+        Socket socket = new Socket("10.254.4.17", 5000);
         ChatClient client = new ChatClient(socket);
         client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         client.frame.setVisible(true);
