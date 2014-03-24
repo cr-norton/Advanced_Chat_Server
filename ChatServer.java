@@ -1,72 +1,133 @@
-import java.awt.Image;
+package serve;
+
+import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import javax.imageio.ImageIO;
-
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
+import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class ChatServer {
+public class Serve {
+    
+    public class personalKey{
+        String myName;
+        Key myKey;
+        public personalKey( String name, Key key){
+            this.myName = name;
+            this.myKey = key;
+        }
+    }
+    
+    private static final HashSet<personalKey> listKeys = new HashSet<>();
 
-	public class clientUser{
-		String name;
-		PrintWriter writer;
-		public clientUser(String username, PrintWriter pwriter){
-			name = username;
-			writer = pwriter;
-		}
-	}
+    public class clientUser{
+        String name;
+        PrintWriter writer;
+        DataOutputStream dosStream;
+        String myStatus;
+        public clientUser(String username, PrintWriter pwriter, DataOutputStream dstream, String status){
+            name = username;
+            writer = pwriter;
+            dosStream = dstream;
+            myStatus = status;
+        }
+    }
+    
 
-	private static final int PORT = 5000;
+    private static final int PORT = 5000;
 
-    private static HashSet<String> names = new HashSet<String>();
-    List<clientUser> clientList = new ArrayList<clientUser>();
+    private static final HashSet<String> names = new HashSet<>();
+    private static final List<clientUser> clientList = new ArrayList<>();
+    private static final HashSet<PrintWriter> writers = new HashSet<>();
+    private static final HashSet<DataOutputStream> imageWriters = new HashSet<>();
+    private static final HashSet<Key> keys = new HashSet<>();
+    
+    private static Cipher ecipher;
+    private static Cipher dcipher;
+    
+    public static String keyString = "770A8A65DA156D24";
 
-    private static HashSet<PrintWriter> writers = new HashSet<PrintWriter>();
-
+    final PrintWriter out = null;
+    final DataOutputStream dout = null;
+    static JFrame frame = new JFrame("Server");
+    final static JTextField textField = new JTextField(40);
+    static JTextArea messageArea = new JTextArea(8, 40);    
+    static JButton kickUser = new JButton("Kick User");
+    static JButton flushOutputs = new JButton("Flush");
+    static String kicker;
+    
+   public static String tempKeySeed = "BT0N35Q5DA16YD84";
     
     public static void main(String[] args) throws Exception {
         System.out.println("The chat server is running.");
         ServerSocket listener = new ServerSocket(PORT);
-        
-    	/*Setup UI*/
         BufferedReader in;
-        final PrintWriter out = null;
-        JFrame frame = new JFrame("Server");
-        final JTextField textField = new JTextField(40);
-        JTextArea messageArea = new JTextArea(8, 40);
-        
-        textField.setEditable(false);
+    	
+        textField.setEditable(true);
         messageArea.setEditable(false);
         frame.getContentPane().add(textField, "North");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
+        frame.getContentPane().add(kickUser, "South");
+        frame.getContentPane().add(flushOutputs, "East");
         frame.pack();
+        
+        final SecretKeySpec keySpec1 = new SecretKeySpec(keyString.getBytes("UTF-8"), "AES");
+        final Cipher cipher1 = Cipher.getInstance("AES");
+        cipher1.init(Cipher.ENCRYPT_MODE, keySpec1);
 
         // Add Listeners
         textField.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent e) {
-                out.println(textField.getText());
-                textField.setText("");
+                try {
+                    String serverMessage = textField.getText();
+                    serverMessage = "SERVER: " + serverMessage;
+                    byte[] encryptedTextBytes = cipher1.doFinal(serverMessage.getBytes("UTF-8"));
+                    String msg = com.sun.org.apache.xerces.internal.impl.dv.util.Base64.encode(encryptedTextBytes);
+                    for (PrintWriter writer : writers) {
+                        writer.println(msg);
+                    }
+                    messageArea.append("Message from Server: " + serverMessage + "\n");
+                    textField.setText("");
+                } catch (        IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Serve.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
+
         });
         
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -77,6 +138,47 @@ public class ChatServer {
         ip = InetAddress.getLocalHost();
         String address = ip.getHostAddress();
         messageArea.append("IP Address: " + address + "\n");
+
+        kickUser.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    kicker = JOptionPane.showInputDialog(frame, "Enter User to Kick", "Moderation", JOptionPane.QUESTION_MESSAGE);
+                    String kick = "KICK" + kicker;
+                    messageArea.append("Kicked user: " + kicker + "\n");
+                    names.remove(kicker);
+                    byte[] encryptedTextBytes = cipher1.doFinal(kick.getBytes("UTF-8"));
+                    String msg = com.sun.org.apache.xerces.internal.impl.dv.util.Base64.encode(encryptedTextBytes);
+                    
+                    String text = "DELETEUSER" + kicker;
+                    byte[] encryptedTextBytes2 = cipher1.doFinal(kick.getBytes("UTF-8"));
+                    String msg2 = com.sun.org.apache.xerces.internal.impl.dv.util.Base64.encode(encryptedTextBytes2);
+                    
+                    for (PrintWriter writer : writers){
+                        writer.println(msg);
+                        writer.println(msg2);
+                    }
+                } catch (        IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Serve.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        flushOutputs.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                    for (PrintWriter writer : writers){
+                        writer.flush();
+                    }
+                    for (DataOutputStream stream : imageWriters){
+                        try {
+                            stream.flush();
+                        } catch (IOException ex) {
+                            Logger.getLogger(Serve.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+            }
+        });
         
         try {
             while (true) {
@@ -90,351 +192,344 @@ public class ChatServer {
 
     private static class Handler extends Thread {
         private String name;
-        private Socket socket;
+        private final Socket socket;
         private BufferedReader in;
         private PrintWriter out;
+        private DataOutputStream dout;
+        private String pass;
+        private String status;
+        private String myKey;
+        private String mySecondKey;
+        private DataInputStream dis;
+        
+        public static String generateString(Random rng, String characters, int length)
+        {
+            char[] text = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                text[i] = characters.charAt(rng.nextInt(characters.length()));
+            }
+            String thisString = new String(text);
+            tempKeySeed = thisString;
+            return tempKeySeed;
+        }
 
         public Handler(Socket socket) {
             this.socket = socket;
         }
 
-                private String encrypt_1(String message){
-        String encryption = "";
-        for (int i = 0; i < message.length(); i++) {   
-            String letter = Character.toString(message.charAt(i));
-         
-            if ( letter.equals("a") | letter.equals("b") | letter.equals("c") | letter.equals("d") | letter.equals("A") | letter.equals("B") | letter.equals("C") | letter.equals("D")) {                
-                encryption = encryption + "0000";
-                if ( letter.equals("a") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("b") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("c") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("d") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("A") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("B") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("C") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("D") ){
-                    encryption = encryption + "0111";
+        public boolean login(String user, String pass) throws FileNotFoundException{
+            try (BufferedReader br = new BufferedReader(new FileReader("logins.txt"))) {
+                String line;
+                String password;
+                while ((line = br.readLine()) != null) {
+                    if ( line.equals(user) ){
+                        password = br.readLine();
+                        if ( password.equals(pass) ) {
+                            br.close();
+                            return true;
+                        }
+                    }
                 }
             }
-            else if ( letter.equals("e") | letter.equals("f") | letter.equals("g") | letter.equals("h") | letter.equals("E") | letter.equals("F") | letter.equals("G") | letter.equals("H") ) {                
-                encryption = encryption + "0001";
-                if ( letter.equals("e") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("f") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("g") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("h") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("E") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("F") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("G") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("H") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("i") | letter.equals("j") | letter.equals("k") | letter.equals("l") | letter.equals("I") | letter.equals("J") | letter.equals("K") | letter.equals("L") ) {                
-                encryption = encryption + "0010";
-                if ( letter.equals("i") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("j") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("k") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("l") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("I") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("J") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("K") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("L") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("m") | letter.equals("n") | letter.equals("o") | letter.equals("p") | letter.equals("M") | letter.equals("N") | letter.equals("O") | letter.equals("P") ) {                
-                encryption = encryption + "0011";
-                if ( letter.equals("m") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("n") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("o") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("p") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("M") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("N") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("O") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("P") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("q") | letter.equals("r") | letter.equals("s") | letter.equals("t") | letter.equals("Q") | letter.equals("R") | letter.equals("S") | letter.equals("T") ) {                
-                encryption = encryption + "0100";
-                if ( letter.equals("q") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("r") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("s") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("t") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("Q") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("R") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("S") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("T") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("u") | letter.equals("v") | letter.equals("w") | letter.equals("x") | letter.equals("U") | letter.equals("V") | letter.equals("W") | letter.equals("X") ) {                
-                encryption = encryption + "0101";
-                if ( letter.equals("u") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("v") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("w") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("x") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("U") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("V") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("W") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("X") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("y") | letter.equals("z") | letter.equals("Y") | letter.equals("Z") ) {                
-                encryption = encryption + "0110";
-                if ( letter.equals("y") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("z") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("Y") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("Z") ){
-                    encryption = encryption + "0011";
-                }
-            }
-            else if ( letter.equals(" ") ){
-                encryption = encryption + "11111111";
-            }
-            else if ( letter.equals(":") ){
-                encryption = encryption + "11100111";
-            }
-        }        
-        return encryption;
-    }
-    
-        private String encrypt_2(String message){
-        
-        String temp = new StringBuilder(message).reverse().toString();
-        String encryption = "";
-        
-        for (int i = 0; i < temp.length(); i++){
-            String Encrypt_i = Character.toString(temp.charAt(i));
-            if ( Encrypt_i.equals("1")){
-                encryption = encryption + "0";
-            }
-            else {
-                encryption = encryption + "1";
-            }
+            catch (IOException e){}
+            return false;
         }
         
-        return encryption;
+        public boolean signup(String user, String pass) throws FileNotFoundException{
+            try (BufferedReader br = new BufferedReader(new FileReader("logins.txt"))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if ( line.equals(user) )
+                        return false;
+                }
+                br.close();
+            }
+            catch (IOException e){}
+            try (FileWriter f0 = new FileWriter("logins.txt", true)) {
+                f0.write("\r\n");
+                f0.write(user);
+                f0.write("\r\n");
+                f0.write(pass);
+                f0.close();
+                out.println("NAMEACCEPTED");
+                return true;
+            }
+            catch (IOException e){}
+            return true;
+        }
+        
+    private static String Decrypt(String encryptedText, String key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
+     
+        SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
+
+        // Instantiate the cipher
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, keySpec);
+        byte[] encryptedTextBytes = com.sun.org.apache.xerces.internal.impl.dv.util.Base64.decode(encryptedText);
+        byte[] decryptedTextBytes = cipher.doFinal(encryptedTextBytes);
+
+        return new String(decryptedTextBytes);
+    }
+    
+    private static String Encrypt(String plainText, String key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+        SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
+
+        // Instantiate the cipher
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+        byte[] encryptedTextBytes = cipher.doFinal(plainText.getBytes("UTF-8"));
+        return com.sun.org.apache.xerces.internal.impl.dv.util.Base64.encode(encryptedTextBytes);
     }
         
-        
+        @Override
         public void run() {
             try {
 
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
+                dout = new DataOutputStream(socket.getOutputStream());
+                dis = new DataInputStream(socket.getInputStream());
                 
+                OUTER:                
                 while (true) {
-                    out.println("SUBMITNAME");
-                    name = in.readLine();
+                    String cmd = Encrypt("SUBMITNAME", keyString);
+                    out.println(cmd);
+                    String choice = in.readLine();
+                    choice = Decrypt(choice, keyString);
+                    switch (choice) {
+                        case "LOGIN":
+                            name = in.readLine();
+                            name = Decrypt(name, keyString);
+                            pass = in.readLine();
+                            pass = Decrypt(pass, keyString);
+                            if (login(name, pass) == true) {
+                                String cmd2 = Encrypt("NAMEACCEPTED", keyString);
+                                out.println(cmd2);
+                                messageArea.append("User " + name + " successfully logged in \n");
+                                synchronized (names) {
+                                    if (!names.contains(name)) {
+                                        names.add(name);
+                                        break OUTER;
+                                    }
+                                }
+                            } else if ( login(name, pass) == false){
+                                out.println(cmd);
+                                messageArea.append("User " + name + " failed to logged in \n");
+                            }   break;
+                        case "SIGNUP":
+                            name = in.readLine();
+                            name = Decrypt(name, keyString);
+                            pass = in.readLine();
+                            pass = Decrypt(pass, keyString);
+                            if (signup(name, pass) == true) {
+                                String cmd2 = Encrypt("NAMEACCEPTED", keyString);
+                                out.println(cmd2);
+                                messageArea.append("User " + name + " successfully registered \n");
+                                synchronized (names) {
+                                    if (!names.contains(name)) {
+                                        names.add(name);
+                                        break OUTER;
+                                    }
+                                }
+                            } else if ( signup(name, pass) == false){
+                                messageArea.append("User " + name + " is already assigned \n");
+                                out.println(cmd);
+                            }   break;
+                    }
                     if (name == null) {
                         return;
                     }
-                    synchronized (names) {
-                        if (!names.contains(name)) {
-                            names.add(name);
-                            break;
-                         }
-                    }
                 }
-
-                out.println("NAMEACCEPTED");
+                
                 writers.add(out);
-                System.out.println("New client connected: " + name);
+                imageWriters.add(dout);
+                
+                String seed = generateString(new Random(), tempKeySeed, 16);
+                myKey = seed;
+                for (PrintWriter writer : writers) {
+                    String msg = name + seed;
+                    msg = Encrypt(msg, keyString);
+                    writer.println(msg);
+                }
+                
+                
+                messageArea.append("New client connected: " + name + "\n");
                 
                 for (PrintWriter writer : writers) {
                     for (String s : names) {
-                    	writer.println("UPDATEUSER " + s);
+                        System.out.println(s);
+                        String msg = "UPDATEUSER" + s;
+                        msg = Encrypt(msg, keyString);
+                    	writer.println(msg);
                     }
                 }
                 
-                System.out.println(names);
-                System.out.println(writers);
-                
                 while (true) {
                     String input = in.readLine();
-                    if (input == null) {
-                        return;
+                    String decryptedText = Decrypt(input, myKey);
+                    
+                    if (decryptedText == null) {
                     }
-                    else if (input.startsWith("IMAGE")){
-                        InputStream in = socket.getInputStream();
-                        DataInputStream dis = new DataInputStream(in);
-
-                        int len = dis.readInt();
-                        byte[] data = new byte[len];
-                        if (len > 0) {
-                            dis.readFully(data);
-                        }
-                        for (PrintWriter writer : writers) {
-                            writer.println("IMAGE");
-                            OutputStream out = socket.getOutputStream(); 
-                            DataOutputStream dos = new DataOutputStream(out);
-
-                            dos.writeInt(data.length);
-                            if (data.length > 0) {
-                                dos.write(data, 0, data.length);
-                            }
-                            System.out.println(data);
-                        }
-                    }
-                    else if (input.startsWith("DISCONNECT")){
-                    	String temp = input.substring(10);
-                        names.remove(temp);
-                        for (PrintWriter writer : writers) {
-                            writer.println("DISCONNECT" + temp);
-    	                    writer.println("MESSAGE " + name + " has disconnected.\n");
-                        }
+                    else if (decryptedText.startsWith("DISCONNECT")){
+                        names.remove(decryptedText.substring(10));
+                        messageArea.append(decryptedText.substring(10) + " has disconnected \n");
+                        String cmd = "DELETEUSER" + decryptedText.substring(10);
+                        cmd = Encrypt(cmd, keyString);
                         if (out != null) {
                             writers.remove(out);
                         }
-                        try {
-                            socket.close();
-                        } catch (IOException e) {
+                        for (PrintWriter writer : writers) {
+                            writer.println(cmd);
+                        }    
+                        socket.close();                        
+                    }
+                    else if (decryptedText.equals("IMAGE")){
+                        int len = dis.readInt();
+                        byte[] data = new byte[len];
+                        
+                        if (len > 0) {
+                            dis.readFully(data);
                         }
-                    	
-                    } else if (input.startsWith("NEWPM")){
-                    	String newChat = input.substring(5);
-                    	System.out.println("PM to " + newChat + "\n");
-                    	String fromWho = in.readLine();
-                    	System.out.println("PM from " + fromWho + "\n");
-                    	if (names.contains(newChat)){
-                    		System.out.println("Recognizes " + newChat + "\n");
-                    		for (PrintWriter writer : writers){
-                    			writer.println("NEWPM" + newChat);
-                    			writer.println(fromWho);
-                    		}
-                    	}
+                        
+                        String cmd = Encrypt("IMAGE", keyString);
+                        for (PrintWriter writer : writers) {
+                            writer.println(cmd);
+                        }
+                        
+                        messageArea.append(name + " posted an image" + "\n");
+                        for (DataOutputStream stream : imageWriters) {
+                            //stream.writeInt(data.length);
+                            if (data.length > 0) {
+                                stream.writeInt(data.length);
+                                stream.write(data, 0, data.length);
+                            }
+                            stream.flush();
+                        }
+                        
+                        data = null;
                     }
-                    else if (input.startsWith("SENDTO")){
-                    	String newChat = input.substring(6);
-                    	System.out.println("PM to " + newChat + "\n");
-                    	System.out.println("PM from " + name + "\n");
-                    	String currentMessage = in.readLine();
-                    	if (names.contains(newChat)){
-                    		System.out.println("Recognizes " + newChat + "\n");
-                    		System.out.println("Message is: " + currentMessage + "\n");
-                    		for (PrintWriter writer : writers){
-                    			writer.println("GET" + newChat);
-                    			writer.println("RECIEVE" + name);
-                    			writer.println( currentMessage );
-                    		}
-                    	}
+                    else if (decryptedText.startsWith("PM")){
+                    	String you = decryptedText.substring(2);
+                        String message = in.readLine();
+                        message = Decrypt(message, myKey);
+                        messageArea.append("From " + name + " to " + you + ": " + message + "\n");
+                        for (PrintWriter writer : writers){
+                            String cmd = "PM" + you;
+                            String encryptedText = Encrypt(cmd, keyString);
+                            writer.println(encryptedText);
+                            encryptedText = Encrypt(name, keyString);
+                            writer.println(encryptedText);
+                            encryptedText = Encrypt(message, keyString);
+                            writer.println(encryptedText);
+                        }
                     }
-                    else {
-	                    for (PrintWriter writer : writers) {
-                                String thisMsg = name + ":" + "  ";
-                                thisMsg = encrypt_1(thisMsg);
-                                thisMsg = encrypt_2(thisMsg);
-                                String space = encrypt_2(encrypt_1(""));
-	                        writer.println("MESSAGE" + input + space + thisMsg);
-	                        System.out.println("Message from " + name + ": " + input);
-                                
-                                DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                                Date date = new Date();
-                                String reportDate = dateFormat.format(date);
-                                
-                                System.out.println(dateFormat.format(date));
-	                    }
+                    else if (decryptedText.startsWith("NEWPM")){
+                    	String to = decryptedText.substring(5);
+                        for (PrintWriter writer : writers){
+                            String cmd = "NEWPM" + to;
+                            cmd = Encrypt(cmd, keyString);
+                            writer.println(cmd);
+                            String from = name;
+                            from = Encrypt(from, keyString);
+                            writer.println(from);
+                        }
+                    }
+                    else if (decryptedText.startsWith("GROUPONE")) {
+                        String message = decryptedText.substring(8);
+                        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                        Date date = new Date();
+                        String reportDate = dateFormat.format(date);
+                        String full = ("GROUP" + "ONE" + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        String encryptedText = Encrypt(full, keyString);
+                        messageArea.append("Group one: " + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("GROUPTWO")) {
+                        String message = decryptedText.substring(8);
+                        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                        Date date = new Date();
+                        String reportDate = dateFormat.format(date);
+                        String full = ("GROUP" + "TWO" + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        String encryptedText = Encrypt(full, keyString);
+                        messageArea.append("Group two: " + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("GROUPTHREE")) {
+                        String message = decryptedText.substring(10);
+                        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                        Date date = new Date();
+                        String reportDate = dateFormat.format(date);
+                        String full = ("GROUP" + "THREE" + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        String encryptedText = Encrypt(full, keyString);
+                        messageArea.append("Group three: " + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("GROUPFOUR")) {
+                        String message = decryptedText.substring(9);
+                        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                        Date date = new Date();
+                        String reportDate = dateFormat.format(date);
+                        String full = ("GROUP" + "FOUR" + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        String encryptedText = Encrypt(full, keyString);
+                        messageArea.append("Group four: " + "( " + reportDate + " ) " + name + ": " + message + "\n");
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("AWAY")) {
+                        String user = decryptedText.substring(4);
+                        String encryptedText = "AWAY" + name;
+                        status = "AWAY";
+                        messageArea.append( name + " is away" + "\n");
+                        encryptedText = Encrypt(encryptedText, keyString);
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("BUSY")) {
+                        String user = decryptedText.substring(4);
+                        String encryptedText = "BUSY" + name;
+                        status = "BUSY";
+                        messageArea.append( name + " is busy" + "\n");
+                        encryptedText = Encrypt(encryptedText, keyString);
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    }
+                    else if (decryptedText.startsWith("AVAILABLE")) {
+                        String user = decryptedText.substring(9);
+                        String encryptedText = "AVAILABLE" + name;
+                        status = "AVAILABLE";
+                        messageArea.append( name + " is available" + "\n");
+                        encryptedText = Encrypt(encryptedText, keyString);
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
                     }
                 }
             } catch (IOException e) {
                 System.out.println(e);
-            } finally {
+            } catch (    NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+                Logger.getLogger(Serve.class.getName()).log(Level.SEVERE, null, ex);
+            }/* finally {
                 if (name != null) {
-                    names.remove(name);
-                    for (PrintWriter writer : writers) {
-                    	writer.println("DELETEUSER" + name);
+                    try {
+                        names.remove(name);
+                        String text = "DELETEUSER" + name;
+                        String encryptedText = Encrypt(text, keyString);
+                        for (PrintWriter writer : writers) {
+                            writer.println(encryptedText);
+                        }
+                    } catch (            NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                        Logger.getLogger(Serve.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
                 if (out != null) {
@@ -444,7 +539,7 @@ public class ChatServer {
                     socket.close();
                 } catch (IOException e) {
                 }
-            }
+            }*/
         }
     }
 }
