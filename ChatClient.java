@@ -1,8 +1,12 @@
-package chatclient;
+package cli;
+
+import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -18,14 +22,27 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.InetAddress;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import javax.imageio.ImageIO;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -42,44 +59,183 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
-public class ChatClient {
+public class Cli {
     
-    int PORT = 5000;
-    
+    static int PORT = 5000;
+
+    //Messaging
     BufferedReader in;
     PrintWriter out;
     
+    //Image Transfer
     OutputStream outStream;
     DataOutputStream dosStream;
     InputStream inStream;
     DataInputStream disStream;
     
-    JFrame frame = new JFrame("LetsTalk");
+    //Login Window
+    JFrame loginFrame = new JFrame("Welcome to LetsTalk");
+    JButton loginButton = new JButton("Login");
+    JButton signupButton = new JButton("Sign Up");
     
+    //Chat Room Selector
+    JFrame roomSelection = new JFrame("Pick a chat room");
+    JButton defaultRoom = new JButton("Room One");
+    JButton secondRoom = new JButton("Room Two");
+    JButton thirdRoom = new JButton("Room Three");
+    JButton fouthRoom = new JButton("Room Four");
+    JPanel roomButtonFrame = new JPanel();
+    
+    //Status
+    JFrame statusSelection = new JFrame("Update your status");
+    JButton available = new JButton("Available");
+    JButton away = new JButton("Away");
+    JButton busy = new JButton("Busy");
+    JPanel statusFrame = new JPanel();
+    
+    //Main Chat Window
+    static JFrame frame = new JFrame("LetsTalk");
     JTextField textField = new JTextField(40);
     JTextArea users = new JTextArea(10,10);
     JTextArea messageArea = new JTextArea(20, 20);
     
+    //Button Panel
     JPanel buttonFrame = new JPanel();
     JButton privateMessage = new JButton("Message");
     JButton chatRooms = new JButton("Chatrooms");
     JButton disconnect = new JButton("Disconnect");
     JButton liveStream = new JButton("Video");
     JButton uploadimage = new JButton("Upload");
-    JButton status = new JButton("Status");
-    JButton admin = new JButton("Admin");
-    //JLabel label = new JLabel();
-    JPanel panel = new JPanel ();
+    JButton status = new JButton("Save");
+    JButton admin = new JButton("Status");
     
+    //Image Panel and File Choser
+    JPanel panel = new JPanel ();
+    //JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     JFileChooser fc = new JFileChooser();
-
-    private HashSet<String> names = new HashSet<>();
+    
+    static JFrame privateFrame1 = new JFrame();
+    final JTextField textField1 = new JTextField(40);
+    JTextArea messageArea1 = new JTextArea(8, 40);
+    JPanel buttonFrame1 = new JPanel();
+    JButton close1 = new JButton("Close");
+    
+    static JFrame privateFrame2 = new JFrame();
+    final JTextField textField2 = new JTextField(40);
+    JTextArea messageArea2 = new JTextArea(8, 40);
+    JPanel buttonFrame2 = new JPanel();
+    JButton close2 = new JButton("Close");
+    
+    static JFrame privateFrame3 = new JFrame();
+    final JTextField textField3 = new JTextField(40);
+    JTextArea messageArea3 = new JTextArea(8, 40);
+    JPanel buttonFrame3 = new JPanel();
+    JButton close3 = new JButton("Close");
+    
+    static JFrame privateFrame4 = new JFrame();
+    final JTextField textField4 = new JTextField(40);
+    JTextArea messageArea4 = new JTextArea(8, 40);
+    JPanel buttonFrame4 = new JPanel();
+    JButton close4 = new JButton("Close");
+    
+    static JFrame privateFrame5 = new JFrame();
+    final JTextField textField5 = new JTextField(40);
+    JTextArea messageArea5 = new JTextArea(8, 40);
+    JPanel buttonFrame5 = new JPanel();
+    JButton close5 = new JButton("Close");
+    
+    static JFrame privateFrame6 = new JFrame();
+    final JTextField textField6 = new JTextField(40);
+    JTextArea messageArea6 = new JTextArea(8, 40);
+    JPanel buttonFrame6 = new JPanel();
+    JButton close6 = new JButton("Close");
+    
+    static JFrame privateFrame7 = new JFrame();
+    final JTextField textField7 = new JTextField(40);
+    JTextArea messageArea7 = new JTextArea(8, 40);
+    JPanel buttonFrame7 = new JPanel();
+    JButton close7 = new JButton("Close");
+        
+    static JFrame privateFrame8 = new JFrame();
+    final JTextField textField8 = new JTextField(40);
+    JTextArea messageArea8 = new JTextArea(8, 40);
+    JPanel buttonFrame8 = new JPanel();
+    JButton close8 = new JButton("Close");
+    
+    static JFrame privateFrame9 = new JFrame();
+    final JTextField textField9 = new JTextField(40);
+    JTextArea messageArea9 = new JTextArea(8, 40);
+    JPanel buttonFrame9 = new JPanel();
+    JButton close9 = new JButton("Close");
+    
+    static JFrame privateFrame10 = new JFrame();
+    final JTextField textField10 = new JTextField(40);
+    JTextArea messageArea10 = new JTextArea(8, 40);
+    JPanel buttonFrame10 = new JPanel();
+    JButton close10 = new JButton("Close");
+    
     String myUsername;
     String thisServer;
+    String currentChatRoom;
+    String myKey;
 
-    public ChatClient(final Socket socket) {
+    String keyString = "770A8A65DA156D24";
+    String Status = "AVAILABLE";
 
+    
+    private HashSet<String> names = new HashSet<>();
+    private HashSet<clients> Users = new HashSet<>();
+    
+    public class clients{
+        public String uName;
+        public String uStatus;
+        
+        clients(String name, String status){
+            this.uName = name;
+            this.uStatus = status;
+        }
+    }
+    
+    private boolean inUse_1 = false;
+    private boolean inUse_2 = false;
+    private boolean inUse_3 = false;
+    private boolean inUse_4 = false;
+    private boolean inUse_5 = false;
+    private boolean inUse_6 = false;
+    private boolean inUse_7 = false;
+    private boolean inUse_8 = false;
+    private boolean inUse_9 = false;
+    private boolean inUse_10 = false;  
+    
+    private String PM_1 = null;
+    private String PM_2 = null;
+    private String PM_3 = null;
+    private String PM_4 = null;
+    private String PM_5 = null;
+    private String PM_6 = null;
+    private String PM_7 = null;
+    private String PM_8 = null;
+    private String PM_9 = null;
+    private String PM_10 = null;
+    
+    static private String serverIP;
+    boolean isRunning = true;
+    
+    public static BufferedImage resize(BufferedImage img, int newW, int newH) {  
+        int w = img.getWidth();  
+        int h = img.getHeight();  
+        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());  
+        Graphics2D g = dimg.createGraphics();  
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);  
+        g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);  
+        g.dispose();  
+        return dimg;  
+    } 
+    
+    public Cli(final Socket socket) {
+        
         // Layout GUI
         textField.setEditable(false);
         users.setEditable(false);
@@ -88,9 +244,9 @@ public class ChatClient {
         frame.getContentPane().add(users, "West");
         frame.getContentPane().add(new JScrollPane(messageArea), "Center");
         frame.getContentPane().add(buttonFrame, "North");
-        //frame.getContentPane().add(label, "East");
         frame.getContentPane().add(panel, "East");
         
+        //Add Buttons
         buttonFrame.add(status);
         buttonFrame.add(admin);
         buttonFrame.add(privateMessage);
@@ -98,147 +254,703 @@ public class ChatClient {
         buttonFrame.add(liveStream);
         buttonFrame.add(uploadimage);
         buttonFrame.add(disconnect);
-        
-        //label.setPreferredSize(new Dimension(200,200));
-        panel.setPreferredSize(new Dimension(100,100));
+
+        //Size and Scroll
+        panel.setPreferredSize(new Dimension(100, 100));
         frame.pack();
-        
-        //JScrollPane scroller = new JScrollPane(label, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         JScrollPane scroller = new JScrollPane(panel, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         frame.add(scroller);
         
-        // Add Listeners
-        uploadimage.addActionListener(new ActionListener() {
+        textField1.setEditable(true);
+        messageArea1.setEditable(false);  
+        privateFrame1.getContentPane().add(textField1, "North");
+        privateFrame1.getContentPane().add(new JScrollPane(messageArea1), "Center");
+        privateFrame1.getContentPane().add(buttonFrame1, "South");
+        buttonFrame1.add(close1);
+        privateFrame1.pack();
+        privateFrame1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame1.setVisible(false);        
+        
+        textField2.setEditable(true);
+        messageArea2.setEditable(false);  
+        privateFrame2.getContentPane().add(textField2, "North");
+        privateFrame2.getContentPane().add(new JScrollPane(messageArea2), "Center");
+        privateFrame2.getContentPane().add(buttonFrame2, "South");
+        buttonFrame2.add(close2);
+        privateFrame2.pack();
+        privateFrame2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame2.setVisible(false);   
+        
+        textField3.setEditable(true);
+        messageArea3.setEditable(false);  
+        privateFrame3.getContentPane().add(textField3, "North");
+        privateFrame3.getContentPane().add(new JScrollPane(messageArea3), "Center");
+        privateFrame3.getContentPane().add(buttonFrame3, "South");
+        buttonFrame3.add(close3);
+        privateFrame3.pack();
+        privateFrame3.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame3.setVisible(false);   
+        
+        textField4.setEditable(true);
+        messageArea4.setEditable(false);  
+        privateFrame4.getContentPane().add(textField4, "North");
+        privateFrame4.getContentPane().add(new JScrollPane(messageArea4), "Center");
+        privateFrame4.getContentPane().add(buttonFrame4, "South");
+        buttonFrame4.add(close4);
+        privateFrame4.pack();
+        privateFrame4.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame4.setVisible(false);   
+        
+        textField5.setEditable(true);
+        messageArea5.setEditable(false);  
+        privateFrame5.getContentPane().add(textField5, "North");
+        privateFrame5.getContentPane().add(new JScrollPane(messageArea5), "Center");
+        privateFrame5.getContentPane().add(buttonFrame5, "South");
+        buttonFrame5.add(close5);
+        privateFrame5.pack();
+        privateFrame5.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame5.setVisible(false);   
+        
+        textField6.setEditable(true);
+        messageArea6.setEditable(false);  
+        privateFrame6.getContentPane().add(textField6, "North");
+        privateFrame6.getContentPane().add(new JScrollPane(messageArea6), "Center");
+        privateFrame6.getContentPane().add(buttonFrame6, "South");
+        buttonFrame6.add(close6);
+        privateFrame6.pack();
+        privateFrame6.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame6.setVisible(false);   
+        
+        textField7.setEditable(true);
+        messageArea7.setEditable(false);  
+        privateFrame7.getContentPane().add(textField7, "North");
+        privateFrame7.getContentPane().add(new JScrollPane(messageArea7), "Center");
+        privateFrame7.getContentPane().add(buttonFrame7, "South");
+        buttonFrame7.add(close7);
+        privateFrame7.pack();
+        privateFrame7.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame7.setVisible(false);           
+        
+        textField8.setEditable(true);
+        messageArea8.setEditable(false);  
+        privateFrame8.getContentPane().add(textField8, "North");
+        privateFrame8.getContentPane().add(new JScrollPane(messageArea8), "Center");
+        privateFrame8.getContentPane().add(buttonFrame8, "South");
+        buttonFrame8.add(close8);
+        privateFrame8.pack();
+        privateFrame8.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame8.setVisible(false);   
+        
+        textField9.setEditable(true);
+        messageArea9.setEditable(false);  
+        privateFrame9.getContentPane().add(textField9, "North");
+        privateFrame9.getContentPane().add(new JScrollPane(messageArea9), "Center");
+        privateFrame9.getContentPane().add(buttonFrame9, "South");
+        buttonFrame9.add(close9);
+        privateFrame9.pack();
+        privateFrame9.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame9.setVisible(false);   
+        
+        textField10.setEditable(true);
+        messageArea10.setEditable(false);  
+        privateFrame10.getContentPane().add(textField10, "North");
+        privateFrame10.getContentPane().add(new JScrollPane(messageArea10), "Center");
+        privateFrame10.getContentPane().add(buttonFrame10, "South");
+        buttonFrame10.add(close10);
+        privateFrame10.pack();
+        privateFrame10.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        privateFrame10.setVisible(false);        
+        
+        
+        currentChatRoom = "ONE";
+        
+            close1.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame1.setVisible(false);
+                    inUse_1 = false;
+                }
+            });   
+            close2.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame2.setVisible(false);
+                    inUse_2 = false;
+                }
+            });   
+            close3.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame3.setVisible(false);
+                    inUse_3 = false;
+                }
+            });   
+            close4.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame4.setVisible(false);
+                    inUse_4 = false;
+                }
+            });   
+            close5.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame5.setVisible(false);
+                    inUse_5 = false;
+                }
+            });   
+            close6.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame6.setVisible(false);
+                    inUse_6 = false;
+                }
+            });   
+            close7.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame7.setVisible(false);
+                    inUse_7 = false;
+                }
+            });   
+            close8.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame8.setVisible(false);
+                    inUse_8 = false;
+                }
+            });   
+            close9.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame9.setVisible(false);
+                    inUse_9 = false;
+                }
+            });   
+            close10.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    privateFrame10.setVisible(false);
+                    inUse_10 = false;
+                }
+            });  
+            
+        textField1.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                int returnVal = fc.showOpenDialog( frame );
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    File file = fc.getSelectedFile();
-                    Image img;
-                    try
-                    {
-                        img = ImageIO.read(file);
-                        BufferedImage originalImage = ImageIO.read(file);
-
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        ImageIO.write( originalImage, "jpg", baos );
-                        baos.flush();
-                        byte[] imageInByte = baos.toByteArray();
-                        baos.close();
-                        
-                        out.println("IMAGE");
-                        
-                        dosStream.writeInt(imageInByte.length);
-                        if (imageInByte.length > 0) {
-                            dosStream.write(imageInByte, 0, imageInByte.length);
-                        }
-
-                    }
-                    catch(IOException k)
-                    {
-
-                    }
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_1;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField1.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg;
+                    String full2 = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea1.append(full2);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField1.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
-            
         });
         
+        textField2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_2;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField2.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea2.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField2.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+  
+        textField3.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_3;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField3.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea3.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField3.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        textField4.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_4;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField4.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea4.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField4.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        textField5.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_5;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField5.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea5.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField5.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+    
+        textField6.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_6;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField6.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea6.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField6.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        textField7.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_7;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField7.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea7.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField7.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        
+        textField8.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_8;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField8.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea8.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField8.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });    
+        
+        textField9.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_9;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField9.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea9.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField9.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }); 
+        
+        textField10.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String send = "PM" + PM_10;
+                    send = Encrypt(send, myKey);
+                    out.println(send);
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    String reportDate = dateFormat.format(date);
+                    String msg = textField10.getText();
+                    String full = "( " + reportDate + " ) " + myUsername + ": " + msg + "\n";
+                    messageArea10.append(full);
+                    full = Encrypt(full, myKey);
+                    out.println(full);
+                    textField10.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }); 
         
         
+        
+        // Add Listeners
         textField.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                Date date = new Date();
-                String reportDate = dateFormat.format(date);
-                String full = reportDate + "      " + textField.getText();
-                out.println(encryption(full));
-                textField.setText("");
+            public void actionPerformed(ActionEvent e) {            
+                try {
+                    String group = "GROUP" + currentChatRoom;
+                    String full = group + textField.getText();
+                    String text = Encrypt(full, myKey);
+                    out.println(text);
+                    textField.setText("");
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
         
         disconnect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                out.println("DISCONNECT" + getName());
+                try {
+                    String text = "DISCONNECT" + myUsername;
+                    String cmd = Encrypt(text, myKey);
+                    out.println(cmd);
+                    frame.setVisible(false);
+                    frame.dispose();
+                    isRunning = false;
+                    System.exit(0);
+                    //socket.close();
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
+        
+        uploadimage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int returnVal = fc.showOpenDialog( frame );
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    File file = fc.getSelectedFile();
+                    try
+                    {
+                        BufferedImage originalImage = ImageIO.read(file);
+                        originalImage = resize(originalImage, 200, 100);
+                        byte[] imageInByte;
+                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                            System.out.println(originalImage.getType());
+                            ImageIO.write( originalImage, "jpg", baos );
+                            imageInByte = baos.toByteArray();
+                            baos.flush();
+                            baos.close();
+                        }
+                        String cmd = Encrypt("IMAGE", myKey);
+                        out.println(cmd);
+                        //dosStream.writeInt(imageInByte.length);
+                        if (imageInByte.length > 0) {
+                            dosStream.writeInt(imageInByte.length);
+                            System.out.println(imageInByte.length + "is length \n");
+                            dosStream.write(imageInByte, 0, imageInByte.length);
+                        }
+                        dosStream.flush();
+                    }
+                    catch(IOException k)
+                    {
+
+                    } catch (            NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+                        Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+            
+        });
+        
+        chatRooms.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                roomSelection.getContentPane().add(roomButtonFrame);
+                roomButtonFrame.add(defaultRoom);
+                roomButtonFrame.add(secondRoom);
+                roomButtonFrame.add(thirdRoom);
+                roomButtonFrame.add(fouthRoom);
+                roomSelection.setVisible(true);
+                roomSelection.pack();
+                
+                defaultRoom.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        currentChatRoom = "ONE";
+                        roomSelection.setVisible(false);
+                        updateFrame();
+                    }
+                });
+
+                secondRoom.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        currentChatRoom = "TWO";
+                        roomSelection.setVisible(false);
+                        updateFrame();
+                    }
+                });
+
+                thirdRoom.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        currentChatRoom = "THREE";
+                        roomSelection.setVisible(false);
+                        updateFrame();
+                    }
+                });
+
+                fouthRoom.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        currentChatRoom = "FOUR";
+                        roomSelection.setVisible(false);
+                        updateFrame();
+                    }
+                });
+                
+            }
+        });      
+        
+        admin.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                statusSelection.getContentPane().add(statusFrame);
+                statusFrame.add(available);
+                statusFrame.add(away);
+                statusFrame.add(busy);
+                statusSelection.setVisible(true);
+                statusSelection.pack();
+                
+                available.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            Status = "AVAILABLE";
+                            String cmd = Status + myUsername;
+                            cmd = Encrypt(cmd, myKey);
+                            out.println(cmd);
+                        } catch (                NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                            Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+
+                away.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            Status = "AWAY";
+                            String cmd = Status + myUsername;
+                            cmd = Encrypt(cmd, myKey);
+                            out.println(cmd);
+                        } catch (                NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                            Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+
+                busy.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            Status = "BUSY";
+                            String cmd = Status + myUsername;
+                            cmd = Encrypt(cmd, myKey);
+                            out.println(cmd);
+                        } catch (                NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                            Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+                
+            }
+        }); 
         
         status.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
                     saveToFile( "saved.txt", messageArea);
-                } catch (Exception ex) {
-                    Logger.getLogger(ChatClient.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                } catch (Exception ex) {}
             }
-        });
+        });        
         
         privateMessage.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String connectTo = JOptionPane.showInputDialog(frame, "Enter user to chat with", "PM", JOptionPane.PLAIN_MESSAGE);
-                out.println("NEWPM" + connectTo);
-                out.println(myUsername);
                 try {
-                    privateChat(myUsername, connectTo, socket);
-                } catch (IOException ex) {
-                    Logger.getLogger(ChatClient.class.getName()).log(Level.SEVERE, null, ex);
+                    final String connectTo = JOptionPane.showInputDialog(frame, "Enter user to chat with", "PM", JOptionPane.PLAIN_MESSAGE);
+                    String cmd = "NEWPM" + connectTo;
+                    cmd = Encrypt(cmd, myKey);
+                    if (PM_1 == null)
+                        PM_1 = connectTo;
+                    else if (PM_2 == null)
+                        PM_2 = connectTo;
+                    else if (PM_3 == null)
+                        PM_3 = connectTo;
+                    else if (PM_4 == null)
+                        PM_4 = connectTo;
+                    else if (PM_5 == null)
+                        PM_5 = connectTo;
+                    else if (PM_6 == null)
+                        PM_6 = connectTo;
+                    else if (PM_7 == null)
+                        PM_7 = connectTo;
+                    else if (PM_8 == null)
+                        PM_8 = connectTo;
+                    else if (PM_9 == null)
+                        PM_9 = connectTo;
+                    else if (PM_10 == null)
+                        PM_10 = connectTo;
+                    if ( inUse_1 == false) {
+                        privateFrame1.setVisible(true);
+                        out.println(cmd);
+                        inUse_1 = true;
+                        PM_1 = connectTo;
+                        privateFrame1.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_2 == false) {
+                        privateFrame2.setVisible(true);
+                        out.println(cmd);
+                        inUse_2 = true;
+                        PM_2 = connectTo;
+                        privateFrame2.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_3 == false) {
+                        privateFrame3.setVisible(true);
+                        out.println(cmd);
+                        inUse_3 = true;
+                        PM_3 = connectTo;
+                        privateFrame3.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_4 == false) {
+                        privateFrame4.setVisible(true);
+                        out.println(cmd);
+                        inUse_4 = true;
+                        PM_4 = connectTo;
+                        privateFrame4.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_5 == false) {
+                        privateFrame5.setVisible(true);
+                        out.println(cmd);
+                        inUse_5 = true;
+                        PM_5 = connectTo;
+                        privateFrame5.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_6 == false) {
+                        privateFrame6.setVisible(true);
+                        out.println(cmd);
+                        inUse_6 = true;
+                        PM_6 = connectTo;
+                        privateFrame6.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_7 == false) {
+                        privateFrame7.setVisible(true);
+                        out.println(cmd);
+                        inUse_7 = true;
+                        PM_7 = connectTo;
+                        privateFrame7.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_8 == false) {
+                        privateFrame8.setVisible(true);
+                        out.println(cmd);
+                        inUse_8 = true;
+                        PM_8 = connectTo;
+                        privateFrame8.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_9 == false) {
+                        privateFrame9.setVisible(true);
+                        out.println(cmd);
+                        inUse_9 = true;
+                        PM_9 = connectTo;
+                        privateFrame9.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                    else if ( inUse_10 == false) {
+                        privateFrame10.setVisible(true);
+                        out.println(cmd);
+                        inUse_10 = true;
+                        PM_10 = connectTo;
+                        privateFrame10.setTitle("You are "+ myUsername + " and you are chatting with  " + connectTo);
+                    }
+                } catch (        NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                    Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }); 
     }
-
-    private void privateChat(final String user_1, final String user_2, Socket socket) throws IOException{
-        JFrame privateFrame = new JFrame( user_2 );
-        final JTextField textField2 = new JTextField(40);
-        JTextArea users2 = new JTextArea(10,10);
-        JTextArea messageArea2 = new JTextArea(8, 40);
-        JPanel buttonFrame2 = new JPanel();
-        JButton privateMessage2 = new JButton("Send");
-        JButton chatRooms2 = new JButton("Chatrooms");
-        JButton disconnect2 = new JButton("Disconnect");
-        JButton liveStream2 = new JButton("Video Stream");
-        textField2.setEditable(true);
-        users2.setEditable(false);
-        messageArea2.setEditable(false);
-        privateFrame.getContentPane().add(textField2, "North");
-        privateFrame.getContentPane().add(users2, "West");
-        privateFrame.getContentPane().add(new JScrollPane(messageArea2), "Center");
-        privateFrame.getContentPane().add(buttonFrame2, "South");
-        buttonFrame2.add(privateMessage2);
-        buttonFrame2.add(chatRooms2);
-        buttonFrame2.add(disconnect2);
-        buttonFrame2.add(liveStream2);
-        privateFrame.pack();
-        privateFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        privateFrame.setVisible(true);
-        
-        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        out = new PrintWriter(socket.getOutputStream(), true);
-        
-        textField2.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                out.println("SENDTO" + user_2);
-                out.println(textField.getText());
-                textField2.setText("");
-            }
-        });
-        
-    }
-    
-    private void Disconnect(String line){
-        String temp = line.substring(10);
-        names.remove(temp);
-        users.setText("");
-        for (String s : names) {
-            users.append(s + "\n");
-        }
-    }
     
     private void updateUsers(String line){
+
         if ( names.contains(line.substring(10)) == false){
             names.add(line.substring(10));
         }
@@ -246,21 +958,37 @@ public class ChatClient {
         for (String s : names) {
             users.append(s + "\n");
         }
-    }
+    }    
     
-    private String getServerAddress() {
-        return JOptionPane.showInputDialog(frame, "Enter IP Address of the Server:", "Welcome to the Chatter", JOptionPane.QUESTION_MESSAGE);
-    }
-
-    private String getName() {
-        return JOptionPane.showInputDialog(frame, "Choose a screen name:", "Screen name selection", JOptionPane.PLAIN_MESSAGE);
-    }
+    private void Disconnect(String line){
+        if (line.equals(myUsername)){
+            frame.dispose();
+        }
+        for ( clients u : Users){
+            if ( u.uName.equals(line) ){
+                u.uStatus = null;
+                u.uName = null;
+            }
+        }
+        users.setText("");
+        for ( clients re : Users ){
+            if ( re.uName != null)
+                users.append( re.uName + " (" + re.uStatus + ") \n");
+        }        
+    }    
     
-
+    public void saveToFile(String fileName, JTextArea textField) throws Exception {
+        try (FileOutputStream outFile = new FileOutputStream(fileName, true)) {
+            outFile.write(textField.getText().getBytes());
+            outFile.close();
+        }
+    }   
+    
     public synchronized void play(final String fileName) 
     {         
         final File file = new File(fileName);
         new Thread(new Runnable() { 
+            @Override
             public void run() {
                 try {
                     Clip clip = AudioSystem.getClip();
@@ -274,604 +1002,470 @@ public class ChatClient {
         }).start();
     }
 
+    private void updateFrame(){
+        messageArea.setText("");
+        panel.removeAll();
+    }
     
-    public void saveToFile(String fileName, JTextArea textField) throws Exception {
-        FileOutputStream out = new FileOutputStream(fileName, true);
-        out.write(textField.getText().getBytes());
-    } 
+    private String getServerAddress() {
+        return JOptionPane.showInputDialog(frame, "Enter IP Address of the Server:", "Welcome to the Chatter", JOptionPane.QUESTION_MESSAGE);
+    }
+
+    private String getName() {
+        return JOptionPane.showInputDialog(frame, "Choose a screen name:", "Screen name selection", JOptionPane.PLAIN_MESSAGE);
+    }
     
+    private String getPass() {
+        return JOptionPane.showInputDialog(frame, "Enter Password", "Screen name selection", JOptionPane.PLAIN_MESSAGE);
+    }
 
-    private void run(Socket socket) throws IOException {
+    private static String Encrypt(String plainText, String key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException {
+        SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
 
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+
+        byte[] encryptedTextBytes = cipher.doFinal(plainText.getBytes("UTF-8"));
+        return com.sun.org.apache.xerces.internal.impl.dv.util.Base64.encode(encryptedTextBytes);
+    }
+    
+    private static String Decrypt(String encryptedText, String key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedEncodingException  {
+        SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
+
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, keySpec);
+        byte[] encryptedTextBytes = com.sun.org.apache.xerces.internal.impl.dv.util.Base64.decode(encryptedText);
+        byte[] decryptedTextBytes = cipher.doFinal(encryptedTextBytes);
+
+        return new String(decryptedTextBytes);
+    }
+    
+    private void run(Socket socket) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, UnsupportedAudioFileException, LineUnavailableException {
+        AudioInputStream audio = AudioSystem.getAudioInputStream(new File("boxing_bell.wav"));
+        Clip clip = AudioSystem.getClip();
+        clip.open(audio);
+        
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
-
-        outStream = socket.getOutputStream(); 
+        outStream = socket.getOutputStream();
         dosStream = new DataOutputStream(outStream);
         inStream = socket.getInputStream();
         disStream = new DataInputStream(inStream);
         
-        while (true) {
+        while (isRunning) {
             String line = in.readLine();
+            String decryptedText = Decrypt(line, keyString);
             
-            if (line.startsWith("SUBMITNAME")) {
-                String thisName = getName();
-                myUsername = thisName;
-                out.println(myUsername);
+            if (socket.isInputShutdown() ){
+                messageArea.append("input connection dropped \n");
             }
-            else if (line.startsWith("NAMEACCEPTED")) {
+            if (socket.isOutputShutdown()){
+                messageArea.append("out connection dropped \n");
+            }
+            
+            //if ( socket.isClosed() || !socket.isConnected() ){
+            //    SocketAddress remoteaddr = new InetSocketAddress(serverIP, PORT);
+            //    socket.connect(remoteaddr);
+            //    socket.isInputShutdown();
+            //    messageArea.append("Reset connection \n");
+            //}
+                
+            if (decryptedText.startsWith("SUBMITNAME")) {
+                //Handle Login
+                loginFrame.getContentPane().add(loginButton, "West");
+                loginFrame.getContentPane().add(signupButton, "East");
+                loginFrame.setVisible(true);
+                loginFrame.pack();
+                
+                //Login Button
+                loginButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            String thisName = getName();
+                            myUsername = thisName;
+                            String thisPass = getPass();
+                            String cmd = Encrypt("LOGIN", keyString);
+                            out.println(cmd);
+                            String user = Encrypt(myUsername, keyString);
+                            out.println(user);
+                            String pass = Encrypt(thisPass, keyString);
+                            out.println(pass);
+                        } catch (                NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                            Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+                
+                //Signup Button
+                signupButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            String thisName = getName();
+                            myUsername = thisName;
+                            String thisPass = getPass();
+                            String cmd = Encrypt("SIGNUP", keyString);
+                            out.println(cmd);
+                            String user = Encrypt(myUsername, keyString);
+                            out.println(user);
+                            String pass = Encrypt(thisPass, keyString);
+                            out.println(pass);
+                        } catch (                NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnsupportedEncodingException ex) {
+                            Logger.getLogger(Cli.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                });
+            }
+            else if (decryptedText.startsWith(myUsername)) {
+                String seed = decryptedText.substring(myUsername.length());
+                myKey = seed;
+            }
+            else if (decryptedText.startsWith("NAMEACCEPTED")) {
                 textField.setEditable(true);
+                loginFrame.setVisible(false);
+                loginFrame.dispose();
+                frame.setTitle("Logged in to LetsTalk as " + myUsername);
             }
-            else if (line.startsWith("MESSAGE")) {
-                play("boxing_bell.wav");
-                messageArea.append(decryption(line.substring(7)) + "\n");
-            }
-            else if (line.startsWith("NEWPM")){
-                String me = line.substring(5);
-                if (myUsername.equals(me)){
-                    String fromWho = in.readLine();
-                    privateChat(me, fromWho, socket);
+            else if (decryptedText.startsWith("KICK")) {
+                String kick = decryptedText.substring(4);
+                if (myUsername.equals(kick)){
+                    Disconnect(kick);
+                    socket.close();
                 }
-            } 
-            else if (line.startsWith("IMAGE")){
-
+            }
+            else if (decryptedText.startsWith("SERVER")) {
+                String message = decryptedText.substring(6);
+                messageArea.append("SERVER" + message + "\n");
+                clip.setFramePosition(0);
+                clip.start();
+            }
+            else if (decryptedText.equals("IMAGE")){
+                System.out.println("got command \n");
                 int len = disStream.readInt();
-                byte[] data = new byte[len];
-                if (len > 0) {
+                byte[] data;
+                if (len > 0){
+                    clip.setFramePosition(0);
+                    clip.start();
+                    data = new byte[len];
                     disStream.readFully(data);
+                    System.out.println("read data \n");
+                    try (InputStream ins = new ByteArrayInputStream(data)) {
+                        BufferedImage imBuff = ImageIO.read(ins);
+                        imBuff = resize(imBuff, 200, 100);
+                        panel.add (new JLabel (new ImageIcon (imBuff)));
+                        ins.close();
+                    }
+                    data = null;
                 }
-                InputStream in = new ByteArrayInputStream(data);
-                BufferedImage bImageFromConvert = ImageIO.read(in);
-                BufferedImage bufferedImage = new BufferedImage(200, 100, BufferedImage.TYPE_INT_RGB);
-                Graphics2D graphics2D = bufferedImage.createGraphics();
-                graphics2D.setComposite(AlphaComposite.Src);
-                graphics2D.drawImage(bImageFromConvert, 0, 0, 200, 100, null);
-                graphics2D.dispose(); 
-                panel.add (new JLabel (new ImageIcon (bufferedImage)));
-            } 
-            else if (line.startsWith("RESET")){
-                names = null;
-                names = new HashSet<String>();
-                users.setText("");
             }
-            else if (line.startsWith("GET")){
-                String me = line.substring(3);
-                if (me.equals(myUsername)){
-                    String from = in.readLine();
-                    if (from.startsWith("RECIEVE")){
-                        String fromWho = from.substring(7);
-                        String thisMessage = in.readLine();
-                        messageArea.append(fromWho + ": " + thisMessage + "\n");
+            else if (decryptedText.startsWith("PM")) {
+                String to = decryptedText.substring(2);
+                String from = in.readLine();
+                from = Decrypt(from, keyString);
+                if ( to.equals(myUsername) ){
+                    if ( from.equals(PM_1) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea1.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_2) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea2.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_3) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea3.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_4) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea4.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_5) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea5.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_6) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea6.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_7) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea7.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_8) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea8.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_9) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea9.append(msg + "\n");
+                    }
+                    else if ( from.equals(PM_10) ){
+                        clip.setFramePosition(0);
+                        clip.start();
+                        String msg = in.readLine();
+                        msg = Decrypt(msg, keyString);
+                        messageArea10.append(msg + "\n");
                     }
                 }
-            }   
-            else if (line.startsWith("DISCONNECT")) {
-                Disconnect(line);
             }
-            else if (line.startsWith("UPDATEUSER")) {
-                updateUsers(line);
+            
+            else if (decryptedText.startsWith("NEWPM")){
+                String to = decryptedText.substring(5);
+                String from = in.readLine();
+                from = Decrypt(from, keyString);
+                if ( to.equals(myUsername) ){
+                    if (PM_1 == null)
+                        PM_1 = from;
+                    else if (PM_2 == null)
+                        PM_2 = from;
+                    else if (PM_3 == null)
+                        PM_3 = from;
+                    else if (PM_4 == null)
+                        PM_4 = from;
+                    else if (PM_5 == null)
+                        PM_5 = from;
+                    else if (PM_6 == null)
+                        PM_6 = from;
+                    else if (PM_7 == null)
+                        PM_7 = from;
+                    else if (PM_8 == null)
+                        PM_8 = from;
+                    else if (PM_9 == null)
+                        PM_9 = from;
+                    else if (PM_10 == null)
+                        PM_10 = from;
+                }
+                if ( to.equals(myUsername) ){
+                    if ( inUse_1 == false) {
+                        privateFrame1.setVisible(true);
+                        inUse_1 = true;
+                        PM_1 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame1.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_2 == false) {
+                        privateFrame2.setVisible(true);
+                        inUse_2 = true;
+                        PM_2 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame2.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_3 == false) {
+                        privateFrame3.setVisible(true);
+                        inUse_3 = true;
+                        PM_3 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame3.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_4 == false) {
+                        privateFrame4.setVisible(true);
+                        inUse_4 = true;
+                        PM_4 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame4.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_5 == false) {
+                        privateFrame5.setVisible(true);
+                        inUse_5 = true;
+                        PM_5 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame5.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_6 == false) {
+                        privateFrame6.setVisible(true);
+                        inUse_6 = true;
+                        PM_6 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame6.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_7 == false) {
+                        privateFrame7.setVisible(true);
+                        inUse_7 = true;
+                        PM_7 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame7.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_8 == false) {
+                        privateFrame8.setVisible(true);
+                        inUse_8 = true;
+                        PM_8 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame8.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_9 == false) {
+                        privateFrame9.setVisible(true);
+                        inUse_9 = true;
+                        PM_9 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame9.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                    else if ( inUse_10 == false) {
+                        privateFrame10.setVisible(true);
+                        inUse_10 = true;
+                        PM_10 = from;
+                        clip.setFramePosition(0);
+                        clip.start();
+                        privateFrame10.setTitle("You are "+ myUsername + " and you are chatting with  " + from);
+                    }
+                }
+            }
+            else if (decryptedText.startsWith("GROUPONE")) {
+                String message = decryptedText.substring(8);
+                if ( currentChatRoom.equals("ONE")){
+                    messageArea.append(message);
+                    clip.setFramePosition(0);
+                    clip.start();
+                }
+            }
+            else if (decryptedText.startsWith("GROUPTWO")) {
+                String message = decryptedText.substring(8);
+                if ( currentChatRoom.equals("TWO")){
+                    messageArea.append(message);
+                    clip.setFramePosition(0);
+                    clip.start();
+                }
+            }
+            else if (decryptedText.startsWith("GROUPTHREE")) {
+                String message = decryptedText.substring(10);
+                if ( currentChatRoom.equals("THREE")){
+                    messageArea.append(message);
+                    clip.setFramePosition(0);
+                    clip.start();
+                }
+            }
+            else if (decryptedText.startsWith("GROUPFOUR")) {
+                String message = decryptedText.substring(9);
+                if ( currentChatRoom.equals("FOUR")){
+                    messageArea.append(message);
+                    clip.setFramePosition(0);
+                    clip.start();
+                }
+            }
+            else if (decryptedText.startsWith("RESET")){
+                names = null;
+                names = new HashSet<>();
+                users.setText("");
+            }
+            else if (decryptedText.equals("DISCONNECT")) {
+               // String name = decryptedText.substring(10);
+                //name = Decrypt(name, keyString);
+                //Disconnect(name);
+            }
+            else if (decryptedText.startsWith("UPDATEUSER")) {
+                String name = decryptedText.substring(10);
+                boolean add = true;
+                if (Users.isEmpty())
+                    Users.add( new clients(name, "AVAILABLE") );
+                for ( clients u : Users){
+                    if ( u.uName.equals(name) )
+                        add = false;
+                }
+                if ( add == true )
+                    Users.add( new clients(name, "AVAILABLE") );
+                users.setText("");
+                for ( clients re : Users ){
+                    if ( re.uName != null)
+                        users.append( re.uName + " (" + re.uStatus + ") \n");
+                }
+            }
+            else if (decryptedText.startsWith("AWAY")) {
+                String name = decryptedText.substring(4);
+                for ( clients u : Users){
+                    if ( u.uName.equals(name) )
+                        u.uStatus = "AWAY";
+                }
+                users.setText("");
+                for ( clients re : Users ){
+                    if ( re.uName != null)
+                        users.append( re.uName + " (" + re.uStatus + ") \n");
+                }
+            }
+            else if (decryptedText.startsWith("BUSY")) {
+                String name = decryptedText.substring(4);
+                for ( clients u : Users){
+                    if ( u.uName.equals(name) )
+                        u.uStatus = "BUSY";
+                }
+                users.setText("");
+                for ( clients re : Users ){
+                    if ( re.uName != null)
+                        users.append( re.uName + " (" + re.uStatus + ") \n");
+                }
+            }
+            else if (decryptedText.startsWith("AVAILABLE")) {
+                String name = decryptedText.substring(9);
+                for ( clients u : Users){
+                    if ( u.uName.equals(name) )
+                        u.uStatus = "AVAILABLE";
+                }
+                users.setText("");
+                for ( clients re : Users ){
+                    if ( re.uName != null)
+                        users.append( re.uName + " (" + re.uStatus + ") \n");
+                }
+            }
+            else if (decryptedText.startsWith("DELETEUSER")) {
+                String name = decryptedText.substring(10);
+                for ( clients u : Users){
+                    if ( u.uName.equals(name) ){
+                        u.uName = null;
+                        u.uStatus = null;
+                    }
+                }
+                users.setText("");
+                for ( clients re : Users ){
+                    if ( re.uName != null)
+                        users.append( re.uName + " (" + re.uStatus + ") \n");
+                }
             }
         }
-    }
-    
-    private String encrypt_1(String message){
-        String encryption = "";
-        for (int i = 0; i < message.length(); i++) {   
-            String letter = Character.toString(message.charAt(i));
-         
-            if ( letter.equals("a") | letter.equals("b") | letter.equals("c") | letter.equals("d") | letter.equals("A") | letter.equals("B") | letter.equals("C") | letter.equals("D")) {                
-                encryption = encryption + "0000";
-                if ( letter.equals("a") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("b") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("c") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("d") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("A") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("B") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("C") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("D") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("e") | letter.equals("f") | letter.equals("g") | letter.equals("h") | letter.equals("E") | letter.equals("F") | letter.equals("G") | letter.equals("H") ) {                
-                encryption = encryption + "0001";
-                if ( letter.equals("e") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("f") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("g") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("h") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("E") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("F") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("G") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("H") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("i") | letter.equals("j") | letter.equals("k") | letter.equals("l") | letter.equals("I") | letter.equals("J") | letter.equals("K") | letter.equals("L") ) {                
-                encryption = encryption + "0010";
-                if ( letter.equals("i") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("j") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("k") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("l") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("I") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("J") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("K") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("L") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("m") | letter.equals("n") | letter.equals("o") | letter.equals("p") | letter.equals("M") | letter.equals("N") | letter.equals("O") | letter.equals("P") ) {                
-                encryption = encryption + "0011";
-                if ( letter.equals("m") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("n") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("o") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("p") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("M") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("N") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("O") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("P") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("q") | letter.equals("r") | letter.equals("s") | letter.equals("t") | letter.equals("Q") | letter.equals("R") | letter.equals("S") | letter.equals("T") ) {                
-                encryption = encryption + "0100";
-                if ( letter.equals("q") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("r") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("s") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("t") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("Q") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("R") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("S") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("T") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("u") | letter.equals("v") | letter.equals("w") | letter.equals("x") | letter.equals("U") | letter.equals("V") | letter.equals("W") | letter.equals("X") ) {                
-                encryption = encryption + "0101";
-                if ( letter.equals("u") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("v") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("w") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("x") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("U") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("V") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("W") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("X") ){
-                    encryption = encryption + "0111";
-                }
-            }
-            else if ( letter.equals("y") | letter.equals("z") | letter.equals("Y") | letter.equals("Z") ) {                
-                encryption = encryption + "0110";
-                if ( letter.equals("y") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("z") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("Y") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("Z") ){
-                    encryption = encryption + "0011";
-                }
-            }
-            else if ( letter.equals("1") | letter.equals("2") | letter.equals("3") | letter.equals("4") | letter.equals("5") | letter.equals("6") | letter.equals("7") | letter.equals("8") | letter.equals("9") | letter.equals("0")){
-                encryption = encryption + "0111";
-                if ( letter.equals("1") ){
-                    encryption = encryption + "0000";
-                }
-                else if ( letter.equals("2") ){
-                    encryption = encryption + "0001";
-                }
-                else if ( letter.equals("3") ){
-                    encryption = encryption + "0010";
-                }
-                else if ( letter.equals("4") ){
-                    encryption = encryption + "0011";
-                }
-                else if ( letter.equals("5") ){
-                    encryption = encryption + "0100";
-                }
-                else if ( letter.equals("6") ){
-                    encryption = encryption + "0101";
-                }
-                else if ( letter.equals("7") ){
-                    encryption = encryption + "0110";
-                }
-                else if ( letter.equals("8") ){
-                    encryption = encryption + "0111";
-                }
-                else if ( letter.equals("9") ){
-                    encryption = encryption + "1000";
-                }
-                else if ( letter.equals("0") ){
-                    encryption = encryption + "1001";
-                }
-            }
-            else if ( letter.equals(" ") ){
-                encryption = encryption + "11111111";
-            }
-            else if ( letter.equals(":") ){
-                encryption = encryption + "11100111";
-            }
-            else if ( letter.equals("/") ){
-                encryption = encryption + "11110111";
-            }
-        }        
-        return encryption;
-    }
-    
-    private String decrypt_1(String message){
-        String decryption = "";     
-        for ( int i = 0; i < message.length() - 7; i += 8){
-            
-            String l_5 = Character.toString(message.charAt(i+4));
-            String l_6 = Character.toString(message.charAt(i+5));
-            String l_7 = Character.toString(message.charAt(i+6));
-            String l_8 = Character.toString(message.charAt(i+7));
-            String l_1 = Character.toString(message.charAt(i));
-            String l_2 = Character.toString(message.charAt(i+1));
-            String l_3 = Character.toString(message.charAt(i+2));
-            String l_4 = Character.toString(message.charAt(i+3));
-            
-            String first = l_1 + l_2 + l_3 + l_4;
-            String second = l_5 + l_6 + l_7 + l_8;
-            
-            if ( first.equals("0000") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "a";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "b";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "c";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "d";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "A";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "B";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "C";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "D";
-                }
-            }
-            else if ( first.equals("0001") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "e";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "f";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "g";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "h";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "E";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "F";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "G";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "H";
-                }
-            }
-            else if ( first.equals("0010") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "i";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "j";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "k";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "l";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "I";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "J";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "K";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "L";
-                }
-            }
-            else if ( first.equals("0011") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "m";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "n";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "o";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "p";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "M";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "N";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "O";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "P";
-                }
-            }
-            else if ( first.equals("0100") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "q";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "r";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "s";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "t";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "Q";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "R";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "S";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "T";
-                }
-            }
-            else if ( first.equals("0101") ){
-                if ( second.equals("0000") ){
-                    decryption = decryption + "u";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "v";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "w";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "x";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "U";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "V";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "W";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "X";
-                }
-            }
-            else if ( first.equals("0110") ) {
-                if ( second.equals("0000") ){
-                    decryption = decryption + "y";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "z";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "Y";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "Z";
-                }
-            }
-            else if ( first.equals("0111") ) {
-                if ( second.equals("0000") ){
-                    decryption = decryption + "1";
-                }
-                else if ( second.equals("0001") ){
-                    decryption = decryption + "2";
-                }
-                else if ( second.equals("0010") ){
-                    decryption = decryption + "3";
-                }
-                else if ( second.equals("0011") ){
-                    decryption = decryption + "4";
-                }
-                else if ( second.equals("0100") ){
-                    decryption = decryption + "5";
-                }
-                else if ( second.equals("0101") ){
-                    decryption = decryption + "6";
-                }
-                else if ( second.equals("0110") ){
-                    decryption = decryption + "7";
-                }
-                else if ( second.equals("0111") ){
-                    decryption = decryption + "8";
-                }
-                else if ( second.equals("1000") ){
-                    decryption = decryption + "9";
-                }
-                else if ( second.equals("1001") ){
-                    decryption = decryption + "0";
-                }
-            }
-            else if ( first.equals("1111") && (second.equals("1111")) ){
-                decryption = decryption + " ";
-            }
-            else if ( first.equals("1110") && (second.equals("0111")) ){
-                decryption = decryption + ":";
-            }
-            else if ( first.equals("1111") && (second.equals("0111")) ){
-                decryption = decryption + "/";
-            }
-        }
-        
-        return decryption;
+        //socket.close();
     }
 
-    private String encrypt_2(String message){
-        
-        String temp = new StringBuilder(message).reverse().toString();
-        String encryption = "";
-        
-        for (int i = 0; i < temp.length(); i++){
-            String Encrypt_i = Character.toString(temp.charAt(i));
-            if ( Encrypt_i.equals("1")){
-                encryption = encryption + "0";
-            }
-            else {
-                encryption = encryption + "1";
-            }
-        }
-        
-        return encryption;
-    }
-    
-    private String decrypt_2(String message){
-        String decryption = "";
-        String temp = new StringBuilder(message).reverse().toString();
-        
-        for (int i = 0; i < temp.length(); i++){
-            String Decrypt_i = Character.toString(temp.charAt(i));
-            if ( Decrypt_i.equals("1") ){
-                decryption = decryption + "0";
-            }
-            else {
-                decryption = decryption + "1";
-            }
-        }
-        return decryption;
-    }
-    
-    private String encryption(String message){
-        String encryption;
-        encryption = encrypt_1(message);
-        encryption = encrypt_2(encryption);
-        return encryption;
-    }
-    
-    private String decryption(String message){
-        String decryption;
-        decryption = decrypt_2(message);
-        decryption = decrypt_1(decryption);
-        return decryption;
-    }
-    
-    
-    
     public static void main(String[] args) throws Exception {
-        Socket socket = new Socket("10.254.4.17", 5000);
-        ChatClient client = new ChatClient(socket);
+        String serverAddress = JOptionPane.showInputDialog(frame, "Enter IP Address of the Server:", "Welcome to the Chatter", JOptionPane.QUESTION_MESSAGE);
+        serverIP = serverAddress;
+        Socket socket = new Socket(serverAddress, PORT);
+        Cli client = new Cli(socket);
         client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         client.frame.setVisible(true);
-        InetAddress ip;
-        ip = InetAddress.getLocalHost();
-        String address = ip.getHostAddress();
         client.run(socket);
     }
 }
